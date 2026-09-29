@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sheet Cheat</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="toolbar">
+    <label class="button primary" for="file-input">Open PDF…</label>
+    <input id="file-input" type="file" accept="application/pdf,.pdf" hidden>
+    <span id="doc-name"></span>
+    <span id="status" role="status"></span>
+    <div class="spacer"></div>
+    <label class="option"><input type="checkbox" id="opt-show" checked> Note names</label>
+    <label class="option">
+      <select id="opt-accidentals">
+        <option value="written">As written (C#, Db)</option>
+        <option value="sharps">Sharps only (C#)</option>
+        <option value="flats">Flats only (Db)</option>
+      </select>
+    </label>
+    <label class="option"><input type="checkbox" id="opt-octave"> Octave (C4)</label>
+    <label class="option"><input type="checkbox" id="opt-colors" checked> Colors</label>
+    <label class="option">Size <input type="range" id="opt-size" min="0.6" max="2" step="0.1" value="1"></label>
+    <label class="option">
+      <select id="opt-fit">
+        <option value="height">Fit page</option>
+        <option value="width">Fit width</option>
+      </select>
+    </label>
+  </header>
+
+  <main id="stage">
+    <div id="empty">
+      <h1>Sheet Cheat</h1>
+      <p>Open a sheet music PDF (or drop it here). The notes are read automatically and their names appear next to each note.</p>
+      <label class="button primary big" for="file-input">Open PDF…</label>
+      <p id="audiveris-warning" hidden>Audiveris was not found, so PDFs will open but notes won't be named yet. See step 2 in the README.</p>
+    </div>
+    <div id="page-wrap" hidden>
+      <canvas id="page-canvas"></canvas>
+      <div id="overlay"></div>
+    </div>
+  </main>
+
+  <button id="prev" class="turn" aria-label="Previous page" disabled>&#8249;</button>
+  <button id="next" class="turn" aria-label="Next page" disabled>&#8250;</button>
+  <div id="page-indicator" hidden></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
