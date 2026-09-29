@@ -92,5 +92,43 @@ class AudiverisMarginsTest(unittest.TestCase):
         self.assertAlmostEqual(result["space"], 10 / 1300)
 
 
+# A voice part that is hidden on the first system (piano intro) and whose
+# layout is carried by the piano part, as Audiveris exports it.
+HIDDEN_VOICE = """<score-partwise version="4.0">
+  <defaults><page-layout><page-height>1400</page-height><page-width>1000</page-width>
+    <page-margins><left-margin>0</left-margin><top-margin>0</top-margin></page-margins></page-layout></defaults>
+  <part-list><score-part id="P1"/><score-part id="P2"/></part-list>
+  <part id="P1">
+    <measure number="1"><attributes><divisions>1</divisions>
+      <clef><sign>G</sign><line>2</line></clef><staff-details print-object="no"/></attributes>
+      <note><rest measure="yes"/><duration>3</duration></note></measure>
+    <measure number="2" width="400"><print new-system="yes"><system-layout>
+      <system-margins><left-margin>50</left-margin></system-margins><system-distance>100</system-distance>
+      </system-layout></print><attributes><staff-details print-object="yes"/></attributes>
+      <note default-x="20"><pitch><step>F</step><octave>5</octave></pitch><duration>3</duration></note></measure>
+  </part>
+  <part id="P2">
+    <measure number="1" width="300"><print><system-layout>
+      <system-margins><left-margin>100</left-margin></system-margins><top-system-distance>200</top-system-distance>
+      </system-layout></print><attributes><divisions>1</divisions><clef><sign>G</sign><line>2</line></clef></attributes>
+      <note default-x="20"><pitch><step>F</step><octave>5</octave></pitch><duration>3</duration></note></measure>
+    <measure number="2" width="400"><print new-system="yes"><staff-layout number="1">
+      <staff-distance>70</staff-distance></staff-layout></print>
+      <note default-x="20"><pitch><step>F</step><octave>5</octave></pitch><duration>3</duration></note></measure>
+  </part>
+</score-partwise>"""
+
+
+class HiddenStaffTest(unittest.TestCase):
+    def test_hidden_part_takes_no_space_and_layout_comes_from_other_part(self):
+        notes = omr.extract_notes(ET.fromstring(HIDDEN_VOICE))["notes"]
+        by_part = {(n["part"], round(n["y"] * 1400)): round(n["x"] * 1000) for n in notes}
+        # system 1: only the piano, at top-system-distance 200, left margin 100
+        self.assertEqual(by_part[(1, 200)], 120)
+        # system 2: voice at 240 + 100 = 340, piano below it at 340 + 40 + 70 = 450
+        self.assertEqual(by_part[(0, 340)], 70)
+        self.assertEqual(by_part[(1, 450)], 70)
+
+
 if __name__ == "__main__":
     unittest.main()

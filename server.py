@@ -31,7 +31,7 @@ WEB = ROOT / "web"
 CACHE = ROOT / "cache"
 MAX_UPLOAD = 60 * 1024 * 1024
 AUDIVERIS_TIMEOUT = 15 * 60
-CACHE_VERSION = 1
+CACHE_VERSION = 2  # bump when omr.py changes; pages are re-placed from the saved MusicXML
 
 AUDIVERIS_CANDIDATES = [
     "/Applications/Audiveris.app/Contents/MacOS/Audiveris",
@@ -67,15 +67,31 @@ def cache_path(doc: str, page: int) -> Path:
     return CACHE / doc / f"page-{page}.v{CACHE_VERSION}.json"
 
 
+def cached_result(doc: str, page: int) -> dict | None:
+    """The saved result for a page, rebuilt from Audiveris' saved MusicXML if
+    it was made by an older version of omr.py (no need to run Audiveris again)."""
+    path = cache_path(doc, page)
+    if path.exists():
+        return json.loads(path.read_text())
+    scores = [p for p in (CACHE / doc / f"page-{page}{ext}" for ext in (".mxl", ".musicxml", ".xml"))
+              if p.exists()]
+    if not scores:
+        return None
+    result = omr.notes_from_files(scores)
+    result["page"] = page
+    path.write_text(json.dumps(result))
+    return result
+
+
 def analyse_page(doc: str, page: int, png: bytes) -> dict:
     audiveris = find_audiveris()
     if not audiveris:
         raise RuntimeError("Audiveris is not installed (see README, step 2)")
 
     with audiveris_lock:
-        cached = cache_path(doc, page)
-        if cached.exists():  # another request finished it while we waited
-            return json.loads(cached.read_text())
+        cached = cached_result(doc, page)
+        if cached is not None:  # another request finished it while we waited
+            return cached
 
         work = Path(tempfile.mkdtemp(prefix="sheetcheat-"))
         try:
@@ -105,7 +121,7 @@ def analyse_page(doc: str, page: int, png: bytes) -> dict:
             shutil.rmtree(work, ignore_errors=True)
 
         result["page"] = page
-        cached.write_text(json.dumps(result))
+        cache_path(doc, page).write_text(json.dumps(result))
         return result
 
 
@@ -149,9 +165,12 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json({"audiveris": find_audiveris()})
         route = self.page_route()
         if route:
-            path = cache_path(*route)
-            if path.exists():
-                return self.send_json(json.loads(path.read_text()))
+            try:
+                result = cached_result(*route)
+            except Exception as exc:
+                return self.send_json({"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
+            if result is not None:
+                return self.send_json(result)
             return self.send_json({"error": "not analysed yet"}, HTTPStatus.NOT_FOUND)
         return super().do_GET()
 

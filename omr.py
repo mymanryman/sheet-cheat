@@ -154,6 +154,23 @@ def _is_system_start(measure: ET.Element, index: int) -> tuple[bool, bool]:
     return new_system, new_page
 
 
+def _staff_visibility(part_measures, staves_per_part) -> list[list[dict[int, bool]]]:
+    """For each part and measure, which staves are printed (staff-details print-object)."""
+    result = []
+    for p, measures in enumerate(part_measures):
+        state = {s: True for s in range(1, staves_per_part[p] + 1)}
+        per_measure = []
+        for m in measures:
+            for details in m.findall("attributes/staff-details"):
+                shown = details.get("print-object", "yes") != "no"
+                number = details.get("number")
+                for s in ([int(number)] if number else list(state)):
+                    state[s] = shown
+            per_measure.append(dict(state))
+        result.append(per_measure)
+    return result
+
+
 def extract_notes(root: ET.Element) -> dict:
     """Return {"notes": [...], "space": ..} with coordinates as page fractions."""
     layout = Layout(root.find("defaults"))
@@ -169,10 +186,12 @@ def extract_notes(root: ET.Element) -> dict:
     n_measures = min(len(p.findall("measure")) for p in parts)
     part_measures = [p.findall("measure")[:n_measures] for p in parts]
 
-    # Group measure indices into systems, using the first part's breaks.
+    # Group measure indices into systems. Any part may carry the break.
     systems: list[dict] = []
-    for i, m in enumerate(part_measures[0]):
-        new_system, new_page = _is_system_start(m, i)
+    for i in range(n_measures):
+        flags = [_is_system_start(measures[i], i) for measures in part_measures]
+        new_system = any(f[0] for f in flags)
+        new_page = any(f[1] for f in flags)
         if new_system:
             systems.append({"measures": [], "new_page": new_page, "start": i})
         systems[-1]["measures"].append(i)
@@ -188,6 +207,8 @@ def extract_notes(root: ET.Element) -> dict:
                 break
         staves_per_part.append(count)
 
+    visible = _staff_visibility(part_measures, staves_per_part)
+
     notes: list[dict] = []
     clefs = [dict() for _ in parts]  # part index -> {staff number: Clef}
     divisions = [1.0 for _ in parts]
@@ -195,13 +216,16 @@ def extract_notes(root: ET.Element) -> dict:
 
     for sysinfo in systems:
         start = sysinfo["start"]
-        first_measure = part_measures[0][start]
 
-        # Layout overrides that come with this system.
+        # Layout overrides that come with this system, from whichever part has them
+        # (when the top part is hidden on this system, the next part carries them).
         system_layout = None
-        for pr in first_measure.findall("print"):
-            if pr.find("system-layout") is not None:
-                system_layout = pr.find("system-layout")
+        for measures in part_measures:
+            for pr in measures[start].findall("print"):
+                if pr.find("system-layout") is not None:
+                    system_layout = pr.find("system-layout")
+            if system_layout is not None:
+                break
         left = layout.system_left
         top_distance = layout.top_system_distance
         distance = layout.system_distance
@@ -228,6 +252,8 @@ def extract_notes(root: ET.Element) -> dict:
                     if d is not None:
                         overrides[int(sl.get("number", "1"))] = d
             for s in range(1, staves_per_part[p] + 1):
+                if not visible[p][start].get(s, True):
+                    continue  # hidden on this system, takes no space
                 if not first:
                     y += STAFF_HEIGHT + overrides.get(s, layout.default_staff_distance(s))
                 staff_tops[(p, s)] = y
@@ -236,7 +262,8 @@ def extract_notes(root: ET.Element) -> dict:
 
         # Horizontal position of each measure in this system (from the first part).
         system_left = layout.page_left + left
-        widths = [_attr(part_measures[0][i], "width") for i in sysinfo["measures"]]
+        widths = [next((w for w in (_attr(ms[i], "width") for ms in part_measures) if w), None)
+                  for i in sysinfo["measures"]]
         known = sum(w for w in widths if w)
         missing = sum(1 for w in widths if not w)
         if missing:
