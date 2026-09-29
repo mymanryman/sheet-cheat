@@ -90,7 +90,13 @@ class Layout:
         self.page_width = _num(page, "page-width")
         self.page_height = _num(page, "page-height")
         self.page_left = _num(margins, "left-margin", 0.0)
+        self.page_right = _num(margins, "right-margin", 0.0)
         self.page_top = _num(margins, "top-margin", 0.0)
+        self.page_bottom = _num(margins, "bottom-margin", 0.0)
+        # The part of the page the positions are relative to. Normally the
+        # whole page, but Audiveris adds its margins around the scanned image,
+        # so there the image is the page minus the margins.
+        self.frame = (0.0, 0.0, self.page_width or 0.0, self.page_height or 0.0)
         system = defaults.find("system-layout") if defaults is not None else None
         self.system_left = _num(system, "system-margins/left-margin", 0.0)
         self.system_right = _num(system, "system-margins/right-margin", 0.0)
@@ -103,6 +109,20 @@ class Layout:
                 d = _num(sl, "staff-distance")
                 if d is not None:
                     self.staff_distance[int(sl.get("number", "0"))] = d
+
+    def use_margins_as_image_edges(self):
+        self.frame = (self.page_left, self.page_top,
+                      self.page_width - self.page_left - self.page_right,
+                      self.page_height - self.page_top - self.page_bottom)
+
+    def fx(self, x: float) -> float:
+        return round((x - self.frame[0]) / self.frame[2], 5)
+
+    def fy(self, y: float) -> float:
+        return round((y - self.frame[1]) / self.frame[3], 5)
+
+    def space(self) -> float:
+        return 10.0 / self.frame[3]
 
     def default_staff_distance(self, number: int) -> float:
         return self.staff_distance.get(number, self.staff_distance.get(0, DEFAULT_STAFF_DISTANCE))
@@ -139,10 +159,13 @@ def extract_notes(root: ET.Element) -> dict:
     layout = Layout(root.find("defaults"))
     if not layout.page_width or not layout.page_height:
         raise ValueError("MusicXML has no page layout, cannot place notes on the page")
+    software = " ".join(el.text or "" for el in root.iter("software"))
+    if "Audiveris" in software:
+        layout.use_margins_as_image_edges()
 
     parts = root.findall("part")
     if not parts:
-        return {"notes": [], "space": 10.0 / layout.page_height}
+        return {"notes": [], "space": layout.space()}
     n_measures = min(len(p.findall("measure")) for p in parts)
     part_measures = [p.findall("measure")[:n_measures] for p in parts]
 
@@ -232,7 +255,7 @@ def extract_notes(root: ET.Element) -> dict:
                 notes.extend(_measure_notes(measures[i], p, mx, mw, staff_tops,
                                             clefs[p], divisions, layout))
 
-    return {"notes": notes, "space": 10.0 / layout.page_height}
+    return {"notes": notes, "space": layout.space()}
 
 
 def _measure_notes(measure, p, mx, mw, staff_tops, clefs, divisions, layout):
@@ -298,9 +321,9 @@ def _measure_notes(measure, p, mx, mw, staff_tops, clefs, divisions, layout):
 
         head = HEAD_WIDTH * (0.7 if el.find("grace") is not None or el.find("cue") is not None else 1.0)
         out.append({
-            "x": round(x / layout.page_width, 5),
-            "y": round(y / layout.page_height, 5),
-            "w": round(head / layout.page_width, 5),
+            "x": layout.fx(x),
+            "y": layout.fy(y),
+            "w": round(head / layout.frame[2], 5),
             "step": step,
             "alter": alter,
             "octave": octave,

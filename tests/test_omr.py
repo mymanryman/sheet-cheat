@@ -79,5 +79,18 @@ class ExtractNotesTest(unittest.TestCase):
         self.assertEqual(self.px(a), (270.0, 435.0))
 
 
+class AudiverisMarginsTest(unittest.TestCase):
+    def test_positions_are_relative_to_the_image_inside_the_margins(self):
+        # Audiveris adds its page margins around the scanned image, so the
+        # image covers 50..950 x 50..1350 of the 1000 x 1400 page.
+        score = SCORE.replace("<defaults>", "<identification><encoding><software>Audiveris 5.11.0"
+                              "</software></encoding></identification><defaults>")
+        result = omr.extract_notes(ET.fromstring(score))
+        first = result["notes"][0]
+        self.assertAlmostEqual(first["x"], (110 - 50) / 900, places=4)
+        self.assertAlmostEqual(first["y"], (165 - 50) / 1300, places=4)
+        self.assertAlmostEqual(result["space"], 10 / 1300)
+
+
 if __name__ == "__main__":
     unittest.main()

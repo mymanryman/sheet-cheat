@@ -122,6 +122,23 @@ cd ~/sheet-cheat
 python3 server.py
 ```
 
+### Updating to a newer version
+
+Stop the server (Ctrl + C), delete the old zip, download the new ZIP from GitHub
+(Code → Download ZIP), then:
+
+```sh
+cd ~/Downloads
+unzip -q sheet-cheat-main.zip
+mv ~/sheet-cheat/cache sheet-cheat-main/ 2>/dev/null
+rm -rf ~/sheet-cheat
+mv sheet-cheat-main ~/sheet-cheat
+cd ~/sheet-cheat
+python3 server.py
+```
+
+This keeps the pages that were already read (the `cache` folder).
+
 ## Using it
 
 * **Turn pages**: the big ‹ › buttons on the left and right, or the arrow keys,

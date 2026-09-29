@@ -1,4 +1,5 @@
 import * as pdfjsLib from "./vendor/pdf.min.mjs";
+import { snapToHeads } from "./snap.js";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "./vendor/pdf.worker.min.mjs";
 
@@ -337,6 +338,14 @@ async function analyseAll(generation) {
       result = { error: err.message || String(err) };
     }
     if (generation !== state.generation) return;
+    if (result.notes?.length) {
+      try {
+        await snapToHeads(await state.pdf.getPage(pageNo), result);
+      } catch (err) {
+        console.warn("couldn't snap labels to note heads", err);
+      }
+      if (generation !== state.generation) return;
+    }
     state.results.set(pageNo, result);
     state.busyPage = null;
     if (pageNo === state.page) drawOverlay();
