@@ -64,11 +64,17 @@ uname -m
    open **Assets** and download the **macOS `.dmg`** that matches your chip
    (the file name contains `arm64` for Apple chips or `x86_64` for Intel).
 2. Open the downloaded `.dmg` and drag **Audiveris** into **Applications**.
-3. macOS may block apps downloaded from the internet. Unblock it:
+3. macOS may block apps downloaded from the internet. Unblock it (it asks for your Mac
+   login password; nothing shows while you type it, just press Return):
 
    ```sh
-   xattr -dr com.apple.quarantine /Applications/Audiveris*.app
+   sudo xattr -dr com.apple.quarantine /Applications/Audiveris*.app
    ```
+
+   If it says "Operation not permitted", open System Settings → Privacy & Security →
+   App Management, switch Terminal on, quit and reopen Terminal, and run it again.
+   Alternatively, open Audiveris once from Applications and, if macOS blocks it, click
+   **Open Anyway** under System Settings → Privacy & Security.
 
 4. Check that Sheet Cheat will be able to find it:
 
