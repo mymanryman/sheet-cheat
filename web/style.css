@@ -80,26 +80,26 @@ html, body {
 
 .note-label {
   position: absolute;
-  transform: translateY(-50%);
-  padding: 0 0.22em;
+  padding: 0 0.25em;
   border-radius: 0.3em;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.15;
-  color: #b00020;
-  background: rgba(255, 250, 205, 0.88);
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  color: #7a2530;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   white-space: nowrap;
 }
-.note-label sub { font-size: 0.7em; vertical-align: baseline; font-weight: 600; }
+.note-label sub { font-size: 0.7em; vertical-align: baseline; font-weight: 500; }
 .note-label.grace { opacity: 0.75; font-size: 80%; }
-#overlay.colors .note-label { color: #111; }
-#overlay.colors .note-label[data-step=C] { background: rgba(255, 99, 99, 0.85); }
-#overlay.colors .note-label[data-step=D] { background: rgba(255, 170, 70, 0.88); }
-#overlay.colors .note-label[data-step=E] { background: rgba(255, 230, 60, 0.9); }
-#overlay.colors .note-label[data-step=F] { background: rgba(120, 220, 110, 0.88); }
-#overlay.colors .note-label[data-step=G] { background: rgba(90, 200, 250, 0.88); }
-#overlay.colors .note-label[data-step=A] { background: rgba(160, 140, 255, 0.88); }
-#overlay.colors .note-label[data-step=B] { background: rgba(255, 140, 210, 0.88); }
+/* soft, muted tints so the labels don't compete with the music */
+#overlay.colors .note-label { color: #333; }
+#overlay.colors .note-label[data-step=C] { background: rgba(236, 203, 203, 0.9); }
+#overlay.colors .note-label[data-step=D] { background: rgba(238, 217, 196, 0.9); }
+#overlay.colors .note-label[data-step=E] { background: rgba(236, 229, 196, 0.9); }
+#overlay.colors .note-label[data-step=F] { background: rgba(206, 226, 204, 0.9); }
+#overlay.colors .note-label[data-step=G] { background: rgba(200, 222, 234, 0.9); }
+#overlay.colors .note-label[data-step=A] { background: rgba(214, 208, 236, 0.9); }
+#overlay.colors .note-label[data-step=B] { background: rgba(234, 208, 224, 0.9); }
 
 .turn {
   position: fixed;

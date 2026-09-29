@@ -85,22 +85,26 @@ uname -m
    This should list a program called `Audiveris`. Audiveris ships with its own Java,
    so nothing else is needed.
 
-### 3. Get Sheet Cheat
+### 3. Get Sheet Cheat with git
 
-The easiest way (works for a private repository too):
+The repository is private, so git needs a key (a "token") to download it. You create
+it once; your Mac remembers it in the Keychain.
 
-1. Open <https://github.com/mymanryman/sheet-cheat>, click the green **Code** button,
-   then **Download ZIP**.
-2. Unpack it into your home folder:
+1. Open <https://github.com/settings/personal-access-tokens/new>.
+2. **Token name**: `sheet-cheat on my Mac`. **Expiration**: pick what you like
+   (for example one year).
+3. **Repository access**: *Only select repositories* → choose `sheet-cheat`.
+4. **Permissions** → **Repository permissions** → **Contents**: *Read-only*.
+5. Click **Generate token** and copy the token (it starts with `github_pat_`).
 
-   ```sh
-   cd ~/Downloads
-   unzip -q sheet-cheat-main.zip
-   mv sheet-cheat-main ~/sheet-cheat
-   ```
+Then download the code:
 
-(If you prefer git and have it signed in to GitHub:
-`git clone https://github.com/mymanryman/sheet-cheat.git ~/sheet-cheat`.)
+```sh
+git clone https://github.com/mymanryman/sheet-cheat.git ~/sheet-cheat
+```
+
+When git asks, type `mymanryman` as the username and paste the token as the password
+(nothing shows while you paste; just press Return).
 
 ### 4. Start it
 
@@ -124,20 +128,25 @@ python3 server.py
 
 ### Updating to a newer version
 
-Stop the server (Ctrl + C), delete the old zip, download the new ZIP from GitHub
-(Code → Download ZIP), then:
+Stop the server (Ctrl + C), then:
 
 ```sh
-cd ~/Downloads
-unzip -q sheet-cheat-main.zip
-mv ~/sheet-cheat/cache sheet-cheat-main/ 2>/dev/null
-rm -rf ~/sheet-cheat
-mv sheet-cheat-main ~/sheet-cheat
 cd ~/sheet-cheat
+git pull
 python3 server.py
 ```
 
-This keeps the pages that were already read (the `cache` folder).
+### Switching from the ZIP download to git
+
+If you set it up from a ZIP earlier, do step 3 once with a temporary folder name and
+move your already-read pages (the `cache` folder) over:
+
+```sh
+git clone https://github.com/mymanryman/sheet-cheat.git ~/sheet-cheat-git
+mv ~/sheet-cheat/cache ~/sheet-cheat-git/ 2>/dev/null
+rm -rf ~/sheet-cheat
+mv ~/sheet-cheat-git ~/sheet-cheat
+```
 
 ## Using it
 

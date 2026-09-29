@@ -195,28 +195,17 @@ function drawOverlay() {
   overlay.classList.toggle("hidden", !settings.show);
   overlay.classList.toggle("colors", settings.colors);
   const result = state.results.get(state.page);
-  if (!result || !result.notes) return;
+  if (!result || !result.notes || !settings.show) return;
 
   const W = canvas.clientWidth;
   const H = canvas.clientHeight;
   const staffSpace = (result.space || 0.008) * H;
   const fontSize = Math.max(10, staffSpace * 1.5 * settings.size);
-  const labelHeight = fontSize * 1.2;
-  const columnWidth = fontSize * (settings.octave ? 2.6 : 2.0);
-  // Notes of a chord sit on top of each other, so spread their labels over
-  // side-by-side columns wherever they would overlap.
-  const columns = new Map(); // chord key -> last label y in each column
-  const sorted = [...result.notes].sort((a, b) => a.y - b.y);
-  const frag = document.createDocumentFragment();
-  for (const note of sorted) {
-    const key = `${note.part}/${note.staff}/${Math.round(note.x * W / 4)}`;
-    const used = columns.get(key) || [];
-    const y = note.y * H;
-    let col = used.findIndex((lastY) => y - lastY >= labelHeight);
-    if (col === -1) col = used.length;
-    used[col] = y;
-    columns.set(key, used);
+  const gap = staffSpace * 0.3;
 
+  // Create all labels first so their real sizes can be measured.
+  const notes = [...result.notes].sort((a, b) => a.x - b.x || a.y - b.y);
+  const labels = notes.map((note) => {
     const { name, octave } = labelFor(note);
     const el = document.createElement("span");
     el.className = "note-label" + (note.grace ? " grace" : "");
@@ -227,12 +216,38 @@ function drawOverlay() {
       sub.textContent = octave;
       el.appendChild(sub);
     }
-    el.style.left = `${(note.x + note.w) * W + staffSpace * 0.35 + col * columnWidth}px`;
-    el.style.top = `${y}px`;
     el.style.fontSize = `${fontSize}px`;
-    frag.appendChild(el);
-  }
-  overlay.appendChild(frag);
+    overlay.appendChild(el);
+    return el;
+  });
+
+  // Then place them one by one, left to right, each in the first spot next
+  // to its note that doesn't touch a label already placed.
+  const placed = [];
+  const free = (x, y, w, h) =>
+    placed.every((r) => x + w + 1 <= r.x || r.x + r.w + 1 <= x || y + h + 1 <= r.y || r.y + r.h + 1 <= y);
+  notes.forEach((note, i) => {
+    const el = labels[i];
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    const right = (note.x + note.w) * W + gap;
+    const left = note.x * W - gap - w;
+    const top = note.y * H - h / 2;
+    const candidates = [
+      [right, top], [right, top - h * 0.55], [right, top + h * 0.55],
+      [right + w * 0.8, top], [right + w * 0.8, top - h * 0.55], [right + w * 0.8, top + h * 0.55],
+      [left, top], [left, top - h * 0.55], [left, top + h * 0.55],
+    ];
+    let spot = candidates.find(([x, y]) => free(x, y, w, h));
+    for (let step = 2; !spot; step++) {
+      // crowded: keep moving right until there is room (always ends)
+      const x = right + step * w * 0.8;
+      spot = [[x, top], [x, top - h * 0.55], [x, top + h * 0.55]].find(([cx, cy]) => free(cx, cy, w, h));
+    }
+    placed.push({ x: spot[0], y: spot[1], w, h });
+    el.style.left = `${spot[0]}px`;
+    el.style.top = `${spot[1]}px`;
+  });
 }
 
 // ---------- page turning ----------
